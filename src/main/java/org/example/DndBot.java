@@ -6,9 +6,29 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
 public class DndBot extends TelegramLongPollingBot {
 
     private final DnDBotHelper dndHelper = new DnDBotHelper(); // Istanza della nuova classe helper
+    private String botUsername;
+    private String botToken;
+
+    public DndBot() {
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream("config.properties"));
+            botUsername = properties.getProperty("bot.username");
+            botToken = properties.getProperty("bot.token");
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Errore: impossibile leggere config.properties");
+            botUsername = "DefaultBotUsername"; // fallback
+            botToken = "DefaultBotToken";       // fallback
+        }
+    }
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -48,11 +68,11 @@ public class DndBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotUsername() {
-        return "DnD_InfosBot";
+        return botUsername;
     }
 
     @Override
     public String getBotToken() {
-        return "8166957016:AAHiRZbjRLELpxn7bxeltE7rtjnKLMxwgaQ";
+        return botToken;
     }
 }
