@@ -4,122 +4,52 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import org.json.JSONObject;
-import org.json.JSONArray;
-
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Properties;
-import java.util.Scanner;
 
 public class DndBot extends TelegramLongPollingBot {
 
-    private String botToken;
-    private String botUsername;
+    private final DnDBotHelper dndHelper = new DnDBotHelper(); // Istanza della nuova classe helper
 
-    public DndBot() {
-        // Carica token e username dal file config.properties
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            Properties prop = new Properties();
-            prop.load(input);
-            botToken = prop.getProperty("BOT_TOKEN");
-            botUsername = prop.getProperty("BOT_USERNAME");
-        } catch (Exception e) {
+    @Override
+    public void onUpdateReceived(Update update) {
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            String message = update.getMessage().getText().trim();
+
+            if (message.startsWith("/monster ")) {
+                String monsterName = message.substring(9).trim(); // prende tutto dopo "/monster "
+                if (monsterName.isEmpty()) {
+                    sendMessage(update.getMessage().getChatId(), "Devi scrivere il nome del mostro!");
+                    return;
+                }
+
+                try {
+                    // Chiamata al helper per ottenere le info del mostro
+                    String monsterInfo = DnDBotHelper.getMonsterData(monsterName);
+                    sendMessage(update.getMessage().getChatId(), monsterInfo);
+                } catch (Exception e) {
+                    sendMessage(update.getMessage().getChatId(), "Errore nel recuperare il mostro: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void sendMessage(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
 
     @Override
     public String getBotUsername() {
-        return botUsername;
+        return "DnD_InfosBot";
     }
 
     @Override
     public String getBotToken() {
-        return botToken;
+        return "8166957016:AAHiRZbjRLELpxn7bxeltE7rtjnKLMxwgaQ";
     }
-
-    @Override
-    public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(chatId));
-
-            if (messageText.equals("/start")) {
-                message.setText("Ciao! Sono il tuo bot D&D. Pronto per avventure epiche!");
-            } else if (messageText.toLowerCase().startsWith("/monster ")) {
-                String[] parts = messageText.split(" ", 2);
-                if (parts.length < 2) {
-                    message.setText("Devi specificare il nome del mostro. Esempio: /monster goblin");
-                } else {
-                    String monsterName = parts[1].toLowerCase();
-                    String monsterInfo = getMonsterInfo(monsterName);
-                    message.setText(monsterInfo);
-                }
-            } else {
-                message.setText("Non conosco questo comando. Prova /start o /monster <nome>");
-            }
-
-            try {
-                execute(message);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Metodo per prendere info da D&D API
-    private String getMonsterInfo(String name) {
-        String apiUrl = "https://www.dnd5eapi.co/api/monsters/" + name;
-        try {
-            URL url = new URL(apiUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0"); // <-- aggiunto
-            conn.connect();
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode != 200) {
-                return "Mostro non trovato o errore API!";
-            }
-
-            Scanner scanner = new Scanner(conn.getInputStream()); // <-- usa conn.getInputStream()
-            StringBuilder inline = new StringBuilder();
-            while (scanner.hasNext()) {
-                inline.append(scanner.nextLine());
-            }
-            scanner.close();
-
-            JSONObject obj = new JSONObject(inline.toString());
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("Nome: ").append(obj.getString("name")).append("\n");
-            sb.append("Tipo: ").append(obj.getString("type")).append("\n");
-            sb.append("Taglia: ").append(obj.getString("size")).append("\n");
-            sb.append("Punti Ferita: ").append(obj.getInt("hit_points")).append("\n");
-            sb.append("CA: ").append(obj.getInt("armor_class")).append("\n");
-
-            if (obj.has("actions")) {
-                sb.append("Azioni:\n");
-                JSONArray actions = obj.getJSONArray("actions");
-                for (int i = 0; i < actions.length(); i++) {
-                    JSONObject action = actions.getJSONObject(i);
-                    sb.append("- ").append(action.getString("name")).append(": ");
-                    if (action.has("desc")) sb.append(action.getString("desc"));
-                    sb.append("\n");
-                }
-            }
-
-            return sb.toString();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Errore durante la connessione all'API D&D.";
-        }
-    }
-
 }
