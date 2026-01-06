@@ -1,5 +1,6 @@
 package org.example;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -22,9 +23,11 @@ public class DndBot extends TelegramLongPollingBot {
                 }
 
                 try {
-                    // Chiamata al helper per ottenere le info del mostro
-                    String monsterInfo = DnDBotHelper.getMonsterData(monsterName);
-                    sendMessage(update.getMessage().getChatId(), monsterInfo);
+                    String json = DnDBotHelper.getMonsterData(monsterName);
+                    Monster monster = new ObjectMapper().readValue(json, Monster.class);
+                    sendMessage(update.getMessage().getChatId(), monster.toReadableString());
+
+
                 } catch (Exception e) {
                     sendMessage(update.getMessage().getChatId(), "Errore nel recuperare il mostro: " + e.getMessage());
                 }
