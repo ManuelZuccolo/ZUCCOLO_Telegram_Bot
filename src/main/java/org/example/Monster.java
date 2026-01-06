@@ -1,12 +1,14 @@
 package org.example;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@JsonIgnoreProperties(ignoreUnknown = true) // ignora campi non mappati
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Monster {
 
     public String index;
@@ -39,16 +41,16 @@ public class Monster {
     public List<ProficiencyWrapper> proficiencies;
 
     @JsonProperty("damage_vulnerabilities")
-    public List<String> damageVulnerabilities;
+    public List<Object> damageVulnerabilities;
 
     @JsonProperty("damage_resistances")
-    public List<String> damageResistances;
+    public List<Object> damageResistances;
 
     @JsonProperty("damage_immunities")
-    public List<String> damageImmunities;
+    public List<Object> damageImmunities;
 
     @JsonProperty("condition_immunities")
-    public List<String> conditionImmunities;
+    public List<Object> conditionImmunities;
 
     public Senses senses;
     public String languages;
@@ -59,7 +61,7 @@ public class Monster {
     @JsonProperty("proficiency_bonus")
     public int proficiencyBonus;
 
-    public int xp; // <--- mancava
+    public int xp;
 
     @JsonProperty("special_abilities")
     public List<SpecialAbility> specialAbilities;
@@ -74,47 +76,63 @@ public class Monster {
     @JsonProperty("updated_at")
     public String updatedAt;
 
-    // CLASSI ANNIDATE
+    @JsonAnySetter
+    public Map<String, Object> extraFields = new HashMap<>();
+
+    // ---- CLASSI ANNIDATE ----
     public static class ArmorClass {
         public String type;
         public int value;
         public List<Armor> armor;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Armor {
         public String index;
         public String name;
         public String url;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class ProficiencyWrapper {
         public int value;
         public Proficiency proficiency;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Proficiency {
         public String index;
         public String name;
         public String url;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Senses {
+        public String blindsight;
         public String darkvision;
+        public String tremorsense;
+        public String truesight;
+        public String superior_senses;
         public int passive_perception;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class SpecialAbility {
         public String name;
         public String desc;
         public List<Damage> damage;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Action {
         public String name;
         public String desc;
-        public int attack_bonus;
+        public Integer attack_bonus;
+        public String multiattack_type;
+        public String action_name;
         public List<Damage> damage;
         public List<Action> actions;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Damage {
@@ -122,21 +140,44 @@ public class Monster {
         public DamageType damageType;
         @JsonProperty("damage_dice")
         public String damageDice;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class DamageType {
         public String index;
         public String name;
         public String url;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
     public static class Form {
         public String index;
         public String name;
         public String url;
+        @JsonAnySetter public Map<String,Object> extraFields = new HashMap<>();
     }
 
-    // metodo leggibile
+    private String formatNames(List<Object> list) {
+        if (list == null || list.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < list.size(); i++) {
+            Object o = list.get(i);
+            if (o instanceof Map) {
+                Map<?,?> map = (Map<?,?>) o;
+                Object name = map.get("name");
+                sb.append(name != null ? name.toString() : "Unknown");
+            } else {
+                sb.append(o.toString());
+            }
+            if (i < list.size() - 1) sb.append(", ");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+
+
+    // ---- METODO LEGGBILE ----
     public String toReadableString() {
         StringBuilder sb = new StringBuilder();
         sb.append("🛡️ Name: ").append(name).append("\n");
@@ -148,20 +189,16 @@ public class Monster {
 
         // Armor class
         sb.append("Armor Class: ");
-        if (armorClass != null && !armorClass.isEmpty()) {
-            for (ArmorClass ac : armorClass) {
-                sb.append(ac.value).append(" (").append(ac.type).append(") ");
-            }
-        }
+        if (armorClass != null) for (ArmorClass ac : armorClass)
+            sb.append(ac.value).append(" (").append(ac.type).append(") ");
         sb.append("\n");
 
-        sb.append("Hit Points: ").append(hitPoints)
-                .append(" (").append(hitDice).append(")\n");
+        sb.append("Hit Points: ").append(hitPoints).append(" (").append(hitDice).append(")\n");
 
         // Speed
-        if (speed != null && !speed.isEmpty()) {
+        if (speed != null) {
             sb.append("Speed: ");
-            speed.forEach((k, v) -> sb.append(k).append(": ").append(v).append(" "));
+            speed.forEach((k,v)->sb.append(k).append(": ").append(v).append(" "));
             sb.append("\n");
         }
 
@@ -171,74 +208,71 @@ public class Monster {
                 .append(", CON: ").append(constitution)
                 .append(", INT: ").append(intelligence)
                 .append(", WIS: ").append(wisdom)
-                .append(", CHA: ").append(charisma)
-                .append("\n");
+                .append(", CHA: ").append(charisma).append("\n");
 
         // Proficiencies
-        if (proficiencies != null && !proficiencies.isEmpty()) {
+        if (proficiencies != null) {
             sb.append("Proficiencies: ");
-            for (ProficiencyWrapper pw : proficiencies) {
+            for (ProficiencyWrapper pw : proficiencies)
                 sb.append(pw.proficiency.name).append(" +").append(pw.value).append("; ");
-            }
-            sb.append("\n");
+            sb.append("\n\n");
         }
 
         // Damage & Condition
-        sb.append("Damage Vulnerabilities: ").append(damageVulnerabilities).append("\n");
-        sb.append("Damage Resistances: ").append(damageResistances).append("\n");
-        sb.append("Damage Immunities: ").append(damageImmunities).append("\n");
-        sb.append("Condition Immunities: ").append(conditionImmunities).append("\n");
+        sb.append("Damage Vulnerabilities: ").append(formatNames(damageVulnerabilities)).append("\n");
+        sb.append("Damage Resistances: ").append(formatNames(damageResistances)).append("\n");
+        sb.append("Damage Immunities: ").append(formatNames(damageImmunities)).append("\n");
+        sb.append("Condition Immunities: ").append(formatNames(conditionImmunities)).append("\n\n");
 
         // Senses
         if (senses != null) {
-            sb.append("Senses: ");
-            if (senses.darkvision != null) sb.append("Darkvision ").append(senses.darkvision).append("; ");
-            sb.append("Passive Perception: ").append(senses.passive_perception).append("\n");
+            sb.append("Senses:\n");
+            if (senses.blindsight != null) sb.append(" - Blindsight: ").append(senses.blindsight).append("\n");
+            if (senses.darkvision != null) sb.append(" - Darkvision: ").append(senses.darkvision).append("\n");
+            if (senses.tremorsense != null) sb.append(" - Tremorsense: ").append(senses.tremorsense).append("\n");
+            if (senses.truesight != null) sb.append(" - Truesight: ").append(senses.truesight).append("\n");
+            if (senses.superior_senses != null) sb.append(" - Superior Senses: ").append(senses.superior_senses).append("\n");
+            sb.append(" - Passive Perception: ").append(senses.passive_perception).append("\n");
         }
 
         sb.append("Languages: ").append(languages).append("\n");
         sb.append("Challenge Rating: ").append(challengeRating)
                 .append(", Proficiency Bonus: +").append(proficiencyBonus)
-                .append(", XP: ").append(xp).append("\n");
+                .append(", XP: ").append(xp).append("\n\n");
 
         // Special Abilities
-        if (specialAbilities != null && !specialAbilities.isEmpty()) {
+        if (specialAbilities != null) {
             sb.append("Special Abilities:\n");
-            for (SpecialAbility sa : specialAbilities) {
+            for (SpecialAbility sa : specialAbilities)
                 sb.append(" - ").append(sa.name).append(": ").append(sa.desc).append("\n");
-            }
         }
 
         // Actions
-        if (actions != null && !actions.isEmpty()) {
+        if (actions != null) {
             sb.append("Actions:\n");
-            for (Action a : actions) {
+            for (Action a : actions)
                 sb.append(" - ").append(a.name).append(": ").append(a.desc).append("\n");
-            }
         }
 
         // Legendary Actions
-        if (legendary_actions != null && !legendary_actions.isEmpty()) {
+        if (legendary_actions != null) {
             sb.append("Legendary Actions:\n");
-            for (Action la : legendary_actions) {
+            for (Action la : legendary_actions)
                 sb.append(" - ").append(la.name).append(": ").append(la.desc).append("\n");
-            }
         }
 
         // Reactions
-        if (reactions != null && !reactions.isEmpty()) {
+        if (reactions != null) {
             sb.append("Reactions:\n");
-            for (Action r : reactions) {
+            for (Action r : reactions)
                 sb.append(" - ").append(r.name).append(": ").append(r.desc).append("\n");
-            }
         }
 
-        sb.append("Forms: ").append(forms).append("\n");
+        sb.append("\nForms: ").append(forms).append("\n");
         sb.append("Image: ").append(image).append("\n");
         sb.append("URL: ").append(url).append("\n");
         sb.append("Updated at: ").append(updatedAt).append("\n");
 
         return sb.toString();
     }
-
 }
