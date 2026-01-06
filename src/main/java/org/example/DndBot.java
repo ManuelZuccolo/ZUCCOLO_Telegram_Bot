@@ -79,6 +79,7 @@ public class DndBot extends TelegramLongPollingBot {
             URL url = new URL(apiUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0"); // <-- aggiunto
             conn.connect();
 
             int responseCode = conn.getResponseCode();
@@ -86,7 +87,7 @@ public class DndBot extends TelegramLongPollingBot {
                 return "Mostro non trovato o errore API!";
             }
 
-            Scanner scanner = new Scanner(url.openStream());
+            Scanner scanner = new Scanner(conn.getInputStream()); // <-- usa conn.getInputStream()
             StringBuilder inline = new StringBuilder();
             while (scanner.hasNext()) {
                 inline.append(scanner.nextLine());
@@ -95,15 +96,13 @@ public class DndBot extends TelegramLongPollingBot {
 
             JSONObject obj = new JSONObject(inline.toString());
 
-            // Costruisco una risposta leggibile
             StringBuilder sb = new StringBuilder();
             sb.append("Nome: ").append(obj.getString("name")).append("\n");
             sb.append("Tipo: ").append(obj.getString("type")).append("\n");
             sb.append("Taglia: ").append(obj.getString("size")).append("\n");
-            sb.append("Punti Ferita: ").append(obj.getJSONObject("hit_points")).append("\n");
+            sb.append("Punti Ferita: ").append(obj.getInt("hit_points")).append("\n");
             sb.append("CA: ").append(obj.getInt("armor_class")).append("\n");
 
-            // Forse aggiungiamo le abilità
             if (obj.has("actions")) {
                 sb.append("Azioni:\n");
                 JSONArray actions = obj.getJSONArray("actions");
@@ -122,4 +121,5 @@ public class DndBot extends TelegramLongPollingBot {
             return "Errore durante la connessione all'API D&D.";
         }
     }
+
 }
