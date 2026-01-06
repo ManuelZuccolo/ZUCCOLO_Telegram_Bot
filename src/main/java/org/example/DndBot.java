@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Properties;
 
 public class DndBot extends TelegramLongPollingBot {
@@ -36,21 +37,37 @@ public class DndBot extends TelegramLongPollingBot {
             String message = update.getMessage().getText().trim();
 
             if (message.startsWith("/monster ")) {
-                String monsterName = message.substring(9).trim(); // prende tutto dopo "/monster "
-                if (monsterName.isEmpty()) {
-                    sendMessage(update.getMessage().getChatId(), "Devi scrivere il nome del mostro!");
-                    return;
-                }
-
                 try {
-                    String json = DnDBotHelper.getMonsterData(monsterName);
-                    Monster monster = new ObjectMapper().readValue(json, Monster.class);
+                    String monsterName = message.substring(9).trim();
+                    String index = DnDBotHelper.nameToIndex(monsterName); // trasforma il nome in index API/DB
+                    ObjectMapper mapper = new ObjectMapper();
+                    String json;
+
+                    //Proviamo a leggere dal database
+                    Optional<String> cached = MonsterDAO.getMonsterJson(index);
+                    if (cached.isPresent()) {
+                        json = cached.get();
+                    } else {
+                        //Se non c'è, chiamiamo l'API
+                        json = DnDBotHelper.getMonsterData(monsterName);
+
+                        //Salviamo nel database
+                        Monster tmp = mapper.readValue(json, Monster.class);
+                        MonsterDAO.saveMonster(index, tmp.name, json);
+                    }
+
+                    //Parsing e invio al chat
+                    Monster monster = mapper.readValue(json, Monster.class);
                     sendMessage(update.getMessage().getChatId(), monster.toReadableString());
 
+                    //Registra la richiesta nel DB
+                    RequestDAO.logRequest(update.getMessage().getChatId(), monster.index);
 
                 } catch (Exception e) {
-                    sendMessage(update.getMessage().getChatId(), "Errore nel recuperare il mostro: " + e.getMessage());
+                    sendMessage(update.getMessage().getChatId(),
+                            "Errore nel recuperare il mostro: " + e.getMessage());
                 }
+
             }
         }
     }
