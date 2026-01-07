@@ -187,7 +187,7 @@ public class Monster {
                 .append("\n");
         sb.append("Alignment: ").append(alignment).append("\n");
 
-        // Armor class
+        //Armor class
         sb.append("Armor Class: ");
         if (armorClass != null) for (ArmorClass ac : armorClass)
             sb.append(ac.value).append(" (").append(ac.type).append(") ");
@@ -195,14 +195,14 @@ public class Monster {
 
         sb.append("Hit Points: ").append(hitPoints).append(" (").append(hitDice).append(")\n");
 
-        // Speed
+        //Speed
         if (speed != null) {
             sb.append("Speed: ");
             speed.forEach((k,v)->sb.append(k).append(": ").append(v).append(" "));
-            sb.append("\n");
+            sb.append("\n\n");
         }
 
-        // Stats
+        //Stats
         sb.append("STR: ").append(strength)
                 .append(", DEX: ").append(dexterity)
                 .append(", CON: ").append(constitution)
@@ -210,7 +210,7 @@ public class Monster {
                 .append(", WIS: ").append(wisdom)
                 .append(", CHA: ").append(charisma).append("\n");
 
-        // Proficiencies
+        //Proficiencies
         if (proficiencies != null) {
             sb.append("Proficiencies: ");
             for (ProficiencyWrapper pw : proficiencies)
@@ -218,13 +218,13 @@ public class Monster {
             sb.append("\n\n");
         }
 
-        // Damage & Condition
+        //Damage & Condition
         sb.append("Damage Vulnerabilities: ").append(formatNames(damageVulnerabilities)).append("\n");
         sb.append("Damage Resistances: ").append(formatNames(damageResistances)).append("\n");
         sb.append("Damage Immunities: ").append(formatNames(damageImmunities)).append("\n");
         sb.append("Condition Immunities: ").append(formatNames(conditionImmunities)).append("\n\n");
 
-        // Senses
+        //Senses
         if (senses != null) {
             sb.append("Senses:\n");
             if (senses.blindsight != null) sb.append(" - Blindsight: ").append(senses.blindsight).append("\n");
@@ -240,28 +240,28 @@ public class Monster {
                 .append(", Proficiency Bonus: +").append(proficiencyBonus)
                 .append(", XP: ").append(xp).append("\n\n");
 
-        // Special Abilities
+        //Special Abilities
         if (specialAbilities != null) {
             sb.append("Special Abilities:\n");
             for (SpecialAbility sa : specialAbilities)
                 sb.append(" - ").append(sa.name).append(": ").append(sa.desc).append("\n");
         }
 
-        // Actions
+        //Actions
         if (actions != null) {
             sb.append("Actions:\n");
             for (Action a : actions)
                 sb.append(" - ").append(a.name).append(": ").append(a.desc).append("\n");
         }
 
-        // Legendary Actions
+        //Legendary Actions
         if (legendary_actions != null) {
             sb.append("Legendary Actions:\n");
             for (Action la : legendary_actions)
                 sb.append(" - ").append(la.name).append(": ").append(la.desc).append("\n");
         }
 
-        // Reactions
+        //Reactions
         if (reactions != null) {
             sb.append("Reactions:\n");
             for (Action r : reactions)
