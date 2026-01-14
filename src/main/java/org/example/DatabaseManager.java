@@ -52,6 +52,18 @@ public class DatabaseManager {
                 );
             """);
 
+            stmt.execute("""
+                    CREATE TABLE IF NOT EXISTS favorites (
+                        chat_id INTEGER NOT NULL,
+                        monster_index TEXT NOT NULL,
+                        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (chat_id, monster_index),
+                        FOREIGN KEY (chat_id) REFERENCES users(chat_id),
+                        FOREIGN KEY (monster_index) REFERENCES monsters(monster_index)
+                    );
+                """);
+
+
         } catch (SQLException e) {
             e.printStackTrace();
         }

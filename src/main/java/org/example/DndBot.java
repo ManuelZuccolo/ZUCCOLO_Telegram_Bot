@@ -40,6 +40,8 @@ public class DndBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
+            UserDAO.upsertUser(update.getMessage().getFrom());
+
             String message = update.getMessage().getText().trim();
 
             if(message.equals("/start")){
@@ -53,6 +55,9 @@ public class DndBot extends TelegramLongPollingBot {
                 • /monster <nome> → mostra le informazioni di un mostro
                   (es: /monster goblin)
                 • /topmonsters → mostra i 5 mostri più cercati
+                • /fav <nome> → salva il mostro nei preferiti
+                • /unfav <nome> → rimuove il mostro dai preferiti
+                • /favourites → mostra i mostri salvati come preferiti
                 • /stats → statistiche generali del bot
                 • /help → mostra i comandi disponibili
             
@@ -179,10 +184,10 @@ public class DndBot extends TelegramLongPollingBot {
                     }
 
                     String statsMsg = """
-            📊 Statistiche Bot:
-            - Mostri nel DB: %d
-            - Ricerche totali registrate: %d
-            """.formatted(totalMonsters, totalRequests);
+                                    📊 Statistiche Bot:
+                                    - Mostri nel DB: %d
+                                    - Ricerche totali registrate: %d
+                                    """.formatted(totalMonsters, totalRequests);
 
                     sendMessage(update.getMessage().getChatId(), statsMsg);
 
@@ -190,7 +195,74 @@ public class DndBot extends TelegramLongPollingBot {
                     sendMessage(update.getMessage().getChatId(),
                             "Errore nel recuperare le statistiche: " + e.getMessage());
                 }
+            }else
+            if (message.startsWith("/fav ")) {
+                try {
+                    String monsterName = message.substring(5).trim();
+                    String index = DnDBotHelper.nameToIndex(monsterName);
+
+                    FavouriteDAO.addFavorite(
+                            update.getMessage().getChatId(),
+                            index
+                    );
+
+                    sendMessage(
+                            update.getMessage().getChatId(),
+                            "⭐ Mostro aggiunto ai preferiti: " + monsterName
+                    );
+
+                } catch (Exception e) {
+                    sendMessage(
+                            update.getMessage().getChatId(),
+                            "Errore nell'aggiunta ai preferiti."
+                    );
+                }
             }
+            else if (message.startsWith("/unfav ")) {
+                try {
+                    String monsterName = message.substring(7).trim();
+                    String index = DnDBotHelper.nameToIndex(monsterName);
+
+                    FavouriteDAO.removeFavorite(
+                            update.getMessage().getChatId(),
+                            index
+                    );
+
+                    sendMessage(
+                            update.getMessage().getChatId(),
+                            "❌ Mostro rimosso dai preferiti: " + monsterName
+                    );
+
+                } catch (Exception e) {
+                    sendMessage(
+                            update.getMessage().getChatId(),
+                            "Errore nella rimozione dai preferiti."
+                    );
+                }
+            }
+            else if (message.equals("/favourites"))
+            {
+                var favorites = FavouriteDAO.getUserFavorites(
+                        update.getMessage().getChatId()
+                );
+
+                if (favorites.isEmpty()) {
+                    sendMessage(
+                            update.getMessage().getChatId(),
+                            "📭 Non hai ancora mostri preferiti."
+                    );
+                    return;
+                }
+
+                StringBuilder sb = new StringBuilder("⭐ I tuoi mostri preferiti:\n");
+
+                for (String index : favorites) {
+                    sb.append(" - ").append(index.replace("-", " ")).append("\n");
+                }
+
+                sendMessage(update.getMessage().getChatId(), sb.toString());
+            }
+
 
         }
 
