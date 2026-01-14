@@ -72,11 +72,16 @@ mvn compile exec:java -Dexec.mainClass="org.example.Main"
 ```
 /monster <nome>	  -->  Recupera le informazioni del mostro, mostra anche l'immagine e salva la richiesta nel database.
 /topmonsters	  -->  Mostra i 5 mostri più cercati dagli utenti.
-/stats	          -->  Mostra statistiche generali: numero di mostri salvati e richieste totali.
+/fav <nome>       -->  Salva il mostro nei preferiti
+/unfav <nome>     -->  Rimuove il mostro dai preferiti
+/favourites       -->  Mostra i mostri salvati come preferiti
+/stats	          -->  Mostra statistiche generali: numero di mostri salvati e richieste totali da tutti gli utenti.
+/help             -->  Mostra i comandi disponibili
 ```
 ### Esempio di utilizzo
 ```
 /monster goblin
+/fav frog
 ```
 ### Output bot:
 
@@ -157,6 +162,8 @@ Output: statistiche generali del bot
 -Il bot memorizza localmente i mostri nel database per evitare richieste ripetute all’API.
 
 -Le immagini vengono recuperate dal campo image del JSON del mostro. Se l’immagine non è disponibile, viene inviato solo il testo.
+
+-Riesce a distinguere i diversi untenti tramite il chat_id
 
 ---
 ## Configurazione del Bot
