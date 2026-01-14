@@ -74,6 +74,9 @@ public class DndBot extends TelegramLongPollingBot {
                 • /monster <nome> → mostra le informazioni di un mostro
                   (es: /monster goblin)
                 • /topmonsters → mostra i 5 mostri più cercati
+                • /fav <nome> → salva il mostro nei preferiti
+                • /unfav <nome> → rimuove il mostro dai preferiti
+                • /favourites → mostra i mostri salvati come preferiti
                 • /stats → statistiche generali del bot
             
                 """;
