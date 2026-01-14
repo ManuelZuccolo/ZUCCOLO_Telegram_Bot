@@ -6,6 +6,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.FileInputStream;
@@ -14,6 +16,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -39,6 +43,64 @@ public class DndBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+
+        // --- GESTIONE CALLBACK DEI PULSANTI ---
+        if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+            // Se il callback è del tipo /monster <nome>
+            if (callbackData.startsWith("/monster ")) {
+                String monsterName = callbackData.substring(9).trim();
+                try {
+                    String index = DnDBotHelper.nameToIndex(monsterName);
+                    ObjectMapper mapper = new ObjectMapper();
+                    String json;
+
+                    // Legge dal database
+                    Optional<String> cached = MonsterDAO.getMonsterJson(index);
+                    if (cached.isPresent()) {
+                        json = cached.get();
+                    } else {
+                        // Se non c'è chiama API
+                        json = DnDBotHelper.getMonsterData(monsterName);
+
+                        // Salva nel database
+                        Monster tmp = mapper.readValue(json, Monster.class);
+                        MonsterDAO.saveMonster(index, tmp.name, json);
+                    }
+
+                    // Parsing
+                    Monster monster = mapper.readValue(json, Monster.class);
+
+                    // Invia immagine se disponibile
+                    if (monster.image != null && !monster.image.isEmpty()) {
+                        String fullUrl = monster.image.startsWith("http")
+                                ? monster.image
+                                : "https://www.dnd5eapi.co" + monster.image;
+
+                        SendPhoto photo = new SendPhoto();
+                        photo.setChatId(String.valueOf(chatId));
+                        photo.setPhoto(new InputFile(fullUrl));
+                        execute(photo);
+                    }
+
+                    // Invia testo con le statistiche
+                    sendMessage(chatId, monster.toReadableString());
+
+                    // Registra richiesta nel DB
+                    RequestDAO.logRequest(chatId, index);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendMessage(chatId, "Errore nel recuperare il mostro: " + e.getMessage());
+                }
+            }
+
+            return; // Evita di processare il messaggio come testo normale
+        }
+/// ////////////////////////////
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             UserDAO.upsertUser(update.getMessage().getFrom());
 
@@ -245,25 +307,47 @@ public class DndBot extends TelegramLongPollingBot {
             }
             else if (message.equals("/favourites"))
             {
-                var favorites = FavouriteDAO.getUserFavorites(
-                        update.getMessage().getChatId()
-                );
+                try (Connection c = DatabaseManager.getConnection();
+                     PreparedStatement ps = c.prepareStatement(
+                             "SELECT m.name FROM favorites f JOIN monsters m ON f.monster_index = m.monster_index WHERE f.chat_id = ?")) {
 
-                if (favorites.isEmpty()) {
-                    sendMessage(
-                            update.getMessage().getChatId(),
-                            "📭 Non hai ancora mostri preferiti."
-                    );
-                    return;
+                    ps.setLong(1, update.getMessage().getChatId());
+                    ResultSet rs = ps.executeQuery();
+
+                    List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+                    boolean hasFavorites = false;
+
+                    while (rs.next()) {
+                        hasFavorites = true;
+                        String monsterName = rs.getString("name");
+
+                        InlineKeyboardButton button = new InlineKeyboardButton();
+                        button.setText(monsterName);
+                        button.setCallbackData("/monster " + monsterName);
+
+                        List<InlineKeyboardButton> row = new ArrayList<>();
+                        row.add(button);
+                        rows.add(row);
+                    }
+
+                    SendMessage messageToSend = new SendMessage();
+                    messageToSend.setChatId(update.getMessage().getChatId().toString());
+
+                    if (!hasFavorites) {
+                        messageToSend.setText("Non hai ancora mostri preferiti. Usa /fav <nome> per aggiungerne qualcuno.");
+                        execute(messageToSend);
+                    } else {
+                        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                        markup.setKeyboard(rows);
+                        messageToSend.setText("I tuoi mostri preferiti:");
+                        messageToSend.setReplyMarkup(markup);
+                        execute(messageToSend);
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendMessage(update.getMessage().getChatId(), "Errore nel recuperare i preferiti: " + e.getMessage());
                 }
-
-                StringBuilder sb = new StringBuilder("⭐ I tuoi mostri preferiti:\n");
-
-                for (String index : favorites) {
-                    sb.append(" - ").append(index.replace("-", " ")).append("\n");
-                }
-
-                sendMessage(update.getMessage().getChatId(), sb.toString());
             }
 
 
