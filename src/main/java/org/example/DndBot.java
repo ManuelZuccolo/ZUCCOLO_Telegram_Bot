@@ -42,6 +42,40 @@ public class DndBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String message = update.getMessage().getText().trim();
 
+            if(message.equals("/start")){
+                String welcome = """
+                🎲 Benvenuto nel DnD Monster Bot!
+            
+                Questo bot ti permette di cercare mostri di Dungeons & Dragons 5e
+                e ottenere statistiche complete direttamente da Telegram.
+            
+                📌 Comandi disponibili:
+                • /monster <nome> → mostra le informazioni di un mostro
+                  (es: /monster goblin)
+                • /topmonsters → mostra i 5 mostri più cercati
+                • /stats → statistiche generali del bot
+                • /help → mostra i comandi disponibili
+            
+                Buona avventura! 🐉
+                """;
+
+                sendMessage(update.getMessage().getChatId(), welcome);
+                return;
+            }else
+
+            if(message.equals("/help")){
+                String help = """
+                📌 Comandi disponibili:
+                • /monster <nome> → mostra le informazioni di un mostro
+                  (es: /monster goblin)
+                • /topmonsters → mostra i 5 mostri più cercati
+                • /stats → statistiche generali del bot
+            
+                """;
+
+                sendMessage(update.getMessage().getChatId(), help);
+                return;
+            }else
             if (message.startsWith("/monster ")) {
                 try {
                     String monsterName = message.substring(9).trim();
